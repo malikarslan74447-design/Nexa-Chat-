@@ -97,9 +97,9 @@
 
 <div id="upd-pop">
     <div class="upd-cont">
-        <h3>🚀 Naya Update!</h3>
-        <p>App ka naya version available hai. Behtar speed ke liye update karein.</p>
-        <a id="dl-link" href="#" class="upd-btn-dl">Download Karein</a>
+        <h3>🚀 New Update!</h3>
+<p>A newer version of the app is available. Please update for better performance and speed.</p>
+        <a id="dl-link" href="#" class="upd-btn-dl">Download</a>
     </div>
 </div>
 
@@ -200,7 +200,7 @@
     const db = getFirestore(app);
 
     // --- Bilkul Side wala Update Check (No blocking) ---
-    const VERSION_CURRENT = "1.0";
+    const VERSION_CURRENT = "1.0.0";
     async function checkUpd() {
         try {
             const r = await fetch('version.json');
