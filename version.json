@@ -1,0 +1,9 @@
+{
+  "version": "1.0.0",
+  "build": "20260205",
+  "developer": "Ayaz",
+  "updates": [
+    "Multi-line typing added",
+    "PWA support added"
+  ]
+}

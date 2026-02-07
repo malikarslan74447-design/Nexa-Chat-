@@ -1,0 +1,15 @@
+{
+  "name": "Nexa Chat",
+  "short_name": "Nexa Chat",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ece5dd",
+  "theme_color": "#075E54",
+  "icons": [
+    {
+      "src": "nexa.jpg",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

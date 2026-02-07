@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Nexa Chat</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#075E54">
+    
+    <style>
+        :root { --primary: #075E54; --bg: #ece5dd; }
+        body { font-family: sans-serif; margin: 0; background: #ddd; height: 100vh; overflow: hidden; }
+        .app { width: 100%; max-width: 500px; height: 100%; background: white; margin: auto; position: relative; display: flex; flex-direction: column; }
+        .header { background: var(--primary); color: white; padding: 15px; font-size: 18px; font-weight: bold; position: sticky; top: 0; z-index: 10; }
+        
+        /* Pages ke liye thodi zyada jagah niche chhodi hai taake nav bar list ko na kaate */
+        .page { display: none; flex: 1; overflow-y: auto; padding-bottom: 160px; } 
+        .active { display: block; }
+        
+        /* Nav Bar - Isko 30px kiya hai taake system buttons se upar rahe */
+        .nav { 
+            position: absolute; 
+            bottom: 30px; 
+            left: 10px; 
+            right: 10px; 
+            background: white; 
+            display: flex; 
+            height: 65px; 
+            border-radius: 35px; 
+            border: 1px solid #ccc; 
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1); 
+            z-index: 99; 
+        }
+        
+        .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; color: #555; cursor: pointer; }
+        .nav-btn.active-nav { color: var(--primary); }
+
+        .chat-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px; cursor: pointer; background: #fff; position: relative; }
+        .avatar { width: 48px; height: 48px; background: #075E54; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; flex-shrink: 0; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .online-dot { width: 12px; height: 12px; background: #4CAF50; border: 2px solid white; border-radius: 50%; position: absolute; left: 45px; bottom: 15px; display: none; }
+        .status-online { display: block !important; }
+
+        .profile-card { text-align: center; padding: 30px; }
+        .upload-label { background: var(--primary); color: white; padding: 8px 15px; border-radius: 20px; font-size: 13px; cursor: pointer; display: inline-block; margin-top: 10px; }
+
+        .auth-input { width: 90%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; outline: none; }
+        .auth-btn { width: 95%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        .auth-toggle { color: var(--primary); margin-top: 20px; cursor: pointer; font-size: 14px; text-decoration: none; display: block; }
+
+        #private-ui { position: absolute; inset: 0; background: var(--bg); z-index: 100; display: none; flex-direction: column; }
+        .msg-box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; padding-bottom: 110px; }
+        
+        .bubble { padding: 8px 12px; border-radius: 10px; max-width: 75%; font-size: 14px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; white-space: pre-wrap; }
+        .sent { align-self: flex-end; background: #dcf8c6; }
+        .received { align-self: flex-start; background: white; }
+        .m-time { font-size: 9px; color: #777; display: block; text-align: right; margin-top: 4px; }
+        
+        /* Input Area - Isay bhi thoda upar kiya hai taake ye bhi buttons ke peeche na jaye */
+        .input-area { 
+            padding: 10px; 
+            display: flex; 
+            background: #f0f0f0; 
+            position: absolute; 
+            bottom: 30px; 
+            left: 0; 
+            right: 0; 
+            border-top: 1px solid #ddd; 
+            align-items: flex-end; 
+            padding-bottom: 10px;
+        }
+
+        #msgInput {
+            flex: 1;
+            padding: 10px 15px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            outline: none;
+            resize: none; 
+            font-family: inherit;
+            font-size: 15px;
+            max-height: 120px; 
+            background: white;
+            line-height: 1.4;
+        }
+        
+        #chatStatus { font-size: 11px; font-weight: normal; display: block; opacity: 0.9; }
+
+        /* Naya Update System Style - Side se */
+        #upd-pop { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center; }
+        .upd-cont { background:white; padding:20px; border-radius:15px; text-align:center; width:80%; max-width:300px; box-shadow:0 10px 25px rgba(0,0,0,0.3); }
+        .upd-btn-dl { background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:20px; margin-top:15px; cursor:pointer; font-weight:bold; display:inline-block; text-decoration:none; }
+    </style>
+</head>
+<body>
+
+<div id="upd-pop">
+    <div class="upd-cont">
+        <h3>🚀 Naya Update!</h3>
+        <p>App ka naya version available hai. Behtar speed ke liye update karein.</p>
+        <a id="dl-link" href="#" class="upd-btn-dl">Download Karein</a>
+    </div>
+</div>
+
+<div class="app">
+    <div id="auth-screen" style="padding: 20px; text-align: center; margin-top: 50px;">
+        <h2 id="auth-title" style="color:var(--primary)">Messenger Signup</h2>
+        <div id="signup-name-field">
+            <input type="text" id="regName" class="auth-input" placeholder="Full Name">
+        </div>
+        <input type="email" id="email" class="auth-input" placeholder="Email">
+        <input type="password" id="pass" class="auth-input" placeholder="Password">
+        <button id="mainAuthBtn" onclick="handleAuth()" class="auth-btn">Sign Up</button>
+        <p id="toggleAuthLink" class="auth-toggle" onclick="toggleAuthMode()">Already have account? Login</p>
+    </div>
+
+    <div id="main-content" style="display:none; flex:1; flex-direction:column; overflow:hidden;">
+        <div id="page-chats" class="page active">
+            <div class="header">Doston ki List</div>
+            <div id="chatList"></div>
+        </div>
+
+        <div id="page-explore" class="page">
+            <div class="header">Dost Dhoondo</div>
+            <div style="padding:15px; display:flex; gap:8px;">
+                <input type="number" id="searchID" placeholder="Dost ka 10-digit ID Number likho..." style="flex:1; padding:12px; border-radius:25px; border:1px solid #ccc; outline:none;">
+                <button onclick="searchUser()" style="background:var(--primary); color:white; border:none; border-radius:50%; width:45px; height:45px;">🔍</button>
+            </div>
+            <div id="searchResult"></div>
+        </div>
+
+        <div id="page-profile" class="page">
+            <div class="header">Meri Profile</div>
+            <div class="profile-card">
+                <div class="avatar" style="width:100px; height:100px; margin:0 auto; font-size:40px;" id="myDispAvatar">A</div>
+                <label class="upload-label">📸 DP Badlein
+                    <input type="file" style="display:none" accept="image/*" onchange="updateDP(this)">
+                </label>
+                
+                <div style="margin-top:20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <input type="text" id="editNameInput" style="display:none; padding:5px; border-radius:5px; border:1px solid #ccc;">
+                    <h3 id="myDispName" style="margin:0;">Naam</h3>
+                    <span id="editIcon" onclick="enableNameEdit()" style="cursor:pointer; font-size:18px;">✏️</span>
+                </div>
+                
+                <p id="myDispID" style="color:var(--primary); font-weight:bold; font-size:20px; margin-top:5px; letter-spacing:1px;"></p>
+                <p style="color:#888; font-size:11px; margin-top:0;">Apka Unique ID Number</p>
+                <button onclick="userLogout()" style="margin-top:30px; border:none; color:red; background:none; font-weight:bold; cursor:pointer;">Logout</button>
+            </div>
+        </div>
+
+        <div class="nav" id="nav-bar">
+            <div class="nav-btn active-nav" id="btn-chats" onclick="showPage('chats')">💬<br>Chats</div>
+            <div class="nav-btn" id="btn-explore" onclick="showPage('explore')">🌎<br>Explore</div>
+            <div class="nav-btn" id="btn-profile" onclick="showPage('profile')">👤<br>Profile</div>
+        </div>
+    </div>
+
+    <div id="private-ui">
+        <div class="header" style="display:flex; align-items:center; gap:10px;">
+            <span onclick="closeChat()" style="cursor:pointer; font-size:24px;">←</span> 
+            <div class="avatar" style="width:35px; height:35px; font-size:14px;" id="chatHeaderAvatar"></div>
+            <div>
+                <span id="chatTitle"></span>
+                <span id="chatStatus">Offline</span>
+            </div>
+        </div>
+        <div class="msg-box" id="msgBox"></div>
+        
+        <div class="input-area">
+            <textarea id="msgInput" placeholder="Message likho..." rows="1" oninput="autoGrow(this)"></textarea>
+            <button onclick="sendMsg()" style="margin-left:8px; background:var(--primary); color:white; border-radius:50%; width:44px; height:44px; border:none; flex-shrink:0;">➤</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(() => console.log("Service Worker Registered"))
+            .catch(err => console.log("Service Worker Failed", err));
+    }
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, query, where, onSnapshot, serverTimestamp, addDoc, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const config = {
+        apiKey: "AIzaSyBydNmzsDqqIhURll80ARwPSGRwwyVzGuU",
+        authDomain: "massenger-eb6f6.firebaseapp.com",
+        projectId: "massenger-eb6f6",
+        storageBucket: "massenger-eb6f6.firebasestorage.app",
+        messagingSenderId: "341097708880",
+        appId: "1:341097708880:web:57982f19a421c162d84055"
+    };
+
+    const app = initializeApp(config);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // --- Bilkul Side wala Update Check (No blocking) ---
+    const VERSION_CURRENT = "1.0";
+    async function checkUpd() {
+        try {
+            const r = await fetch('version.json');
+            const d = await r.json();
+            if(d.version !== VERSION_CURRENT) {
+                document.getElementById('upd-pop').style.display = 'flex';
+                document.getElementById('dl-link').href = d.url;
+            }
+        } catch(e) {}
+    }
+
+    let currentDostId = null, currentChatId = null, unsubMessages = null, unsubStatus = null, isLoginMode = false;
+
+    window.autoGrow = (element) => {
+        element.style.height = "5px";
+        element.style.height = (element.scrollHeight) + "px";
+    };
+
+    const generateID = () => Math.floor(1000000000 + Math.random() * 9000000000).toString();
+
+    const loadCachedChats = () => {
+        const cached = localStorage.getItem('ayaz_chat_cache');
+        if (cached) {
+            const list = document.getElementById('chatList');
+            list.innerHTML = cached;
+            document.querySelectorAll('.chat-item').forEach(item => {
+                const id = item.id.replace('chat-', '');
+                const name = item.querySelector('b').innerText;
+                const dpImg = item.querySelector('img')?.src || "";
+                item.onclick = () => openChat(id, name, dpImg);
+            });
+        }
+    };
+
+    const updateStatus = async (status) => {
+        if (auth.currentUser) {
+            try {
+                await updateDoc(doc(db, "users", auth.currentUser.uid), { status: status, lastSeen: serverTimestamp() });
+            } catch(e) {}
+        }
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') updateStatus("online");
+        else updateStatus("offline");
+    });
+
+    window.toggleAuthMode = () => {
+        isLoginMode = !isLoginMode;
+        document.getElementById('auth-title').innerText = isLoginMode ? "Messenger Login" : "Messenger Signup";
+        document.getElementById('signup-name-field').style.display = isLoginMode ? "none" : "block";
+        document.getElementById('mainAuthBtn').innerText = isLoginMode ? "Login" : "Sign Up";
+        document.getElementById('toggleAuthLink').innerText = isLoginMode ? "New here? Create account" : "Already have account? Login";
+    };
+
+    window.handleAuth = async () => {
+        const e = document.getElementById('email').value, p = document.getElementById('pass').value, n = document.getElementById('regName').value;
+        try {
+            const res = isLoginMode ? await signInWithEmailAndPassword(auth, e, p) : await createUserWithEmailAndPassword(auth, e, p);
+            if(!isLoginMode) {
+                const myID = generateID();
+                await setDoc(doc(db, "users", res.user.uid), { 
+                    email: e, uid: res.user.uid, name: n || e.split('@')[0], 
+                    nexaID: myID, dp: "", status: "online" 
+                });
+            }
+        } catch(err) { alert(err.message); }
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+        if(user) {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'flex';
+            checkUpd(); // Update check yahan chalao
+            loadCachedChats();
+            updateStatus("online");
+            const uSnap = await getDoc(doc(db, "users", user.uid));
+            if(uSnap.exists()){
+                const userData = uSnap.data();
+                document.getElementById('myDispName').innerText = userData.name;
+                document.getElementById('myDispID').innerText = userData.nexaID || "ID Not Found";
+                if(userData.dp) document.getElementById('myDispAvatar').innerHTML = `<img src="${userData.dp}">`;
+            }
+            listenForChats();
+        }
+    });
+
+    window.userLogout = async () => {
+        localStorage.removeItem('ayaz_chat_cache');
+        await updateStatus("offline");
+        await signOut(auth);
+        location.reload();
+    };
+
+    window.enableNameEdit = async () => {
+        const h3 = document.getElementById('myDispName');
+        const input = document.getElementById('editNameInput');
+        const icon = document.getElementById('editIcon');
+        if(input.style.display === 'none') {
+            input.style.display = 'block'; input.value = h3.innerText; h3.style.display = 'none'; icon.innerText = '✅';
+        } else {
+            const newName = input.value.trim();
+            if(newName) {
+                await updateDoc(doc(db, "users", auth.currentUser.uid), { name: newName });
+                h3.innerText = newName;
+            }
+            input.style.display = 'none'; h3.style.display = 'block'; icon.innerText = '✏️';
+        }
+    };
+
+    window.showPage = (id) => {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active-nav'));
+        document.getElementById('page-' + id).classList.add('active');
+        document.getElementById('btn-' + id).classList.add('active-nav');
+    };
+
+    function listenForChats() {
+        const q = query(collection(db, "chats"), where("users", "array-contains", auth.currentUser.uid));
+        onSnapshot(q, (snapshot) => {
+            const list = document.getElementById('chatList');
+            snapshot.forEach(async (d) => {
+                const data = d.data();
+                const otherId = data.users.find(id => id !== auth.currentUser.uid);
+                onSnapshot(doc(db, "users", otherId), (u) => {
+                    const uData = u.data();
+                    let item = document.getElementById('chat-'+otherId);
+                    if(!item) {
+                        item = document.createElement('div');
+                        item.id = 'chat-'+otherId;
+                        item.className = 'chat-item';
+                        list.prepend(item);
+                    }
+                    const avatar = uData.dp ? `<img src="${uData.dp}">` : uData.name[0].toUpperCase();
+                    item.innerHTML = `<div class="avatar">${avatar}</div>
+                                      <div class="online-dot ${uData.status === 'online' ? 'status-online' : ''}"></div>
+                                      <div style="flex:1"><b>${uData.name}</b><br><small style="color:#888">${data.lastMsg || ''}</small></div>`;
+                    item.onclick = () => openChat(otherId, uData.name, uData.dp);
+                    localStorage.setItem('ayaz_chat_cache', list.innerHTML);
+                });
+            });
+        });
+    }
+
+    window.openChat = (id, name, dp) => {
+        currentDostId = id; currentChatId = auth.currentUser.uid < id ? auth.currentUser.uid+"_"+id : id+"_"+auth.currentUser.uid;
+        document.getElementById('chatTitle').innerText = name;
+        document.getElementById('chatHeaderAvatar').innerHTML = dp ? `<img src="${dp}">` : name[0].toUpperCase();
+        document.getElementById('private-ui').style.display = 'flex';
+        if(unsubStatus) unsubStatus();
+        unsubStatus = onSnapshot(doc(db, "users", id), (s) => {
+            const sData = s.data();
+            document.getElementById('chatStatus').innerText = sData.status === "online" ? "Online" : "Offline";
+            document.getElementById('chatStatus').style.color = sData.status === "online" ? "#25D366" : "#777";
+        });
+        if(unsubMessages) unsubMessages();
+        unsubMessages = onSnapshot(query(collection(db, "chats", currentChatId, "messages")), (s) => {
+            const box = document.getElementById('msgBox'); box.innerHTML = "";
+            let msgs = []; s.forEach(m => msgs.push(m.data()));
+            msgs.sort((a,b) => (a.time?.seconds || 0) - (b.time?.seconds || 0)).forEach(m => {
+                const div = document.createElement('div');
+                div.className = `bubble ${m.sender === auth.currentUser.uid ? 'sent' : 'received'}`;
+                const time = m.time ? new Date(m.time.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...';
+                div.innerHTML = `${m.text} <span class="m-time">${time}</span>`;
+                box.appendChild(div);
+            });
+            box.scrollTop = box.scrollHeight;
+        });
+    };
+
+    window.sendMsg = async () => {
+        const inp = document.getElementById('msgInput');
+        const t = inp.value.trim();
+        if(!t) return;
+        inp.value = "";
+        inp.style.height = "42px"; 
+        await setDoc(doc(db, "chats", currentChatId), { users: [auth.currentUser.uid, currentDostId], lastMsg: t, lastUpdate: serverTimestamp() }, { merge: true });
+        await addDoc(collection(db, "chats", currentChatId, "messages"), { text: t, sender: auth.currentUser.uid, time: serverTimestamp() });
+    };
+
+    window.updateDP = (input) => {
+        if (input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                await updateDoc(doc(db, "users", auth.currentUser.uid), { dp: e.target.result });
+                document.getElementById('myDispAvatar').innerHTML = `<img src="${e.target.result}">`;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    };
+
+    window.searchUser = async () => {
+        const targetID = document.getElementById('searchID').value.trim();
+        const q = query(collection(db, "users"), where("nexaID", "==", targetID));
+        const snap = await getDocs(q);
+        const res = document.getElementById('searchResult');
+        res.innerHTML = "";
+        if(!snap.empty) {
+            const u = snap.docs[0].data();
+            res.innerHTML = `<div class="chat-item" onclick="openChat('${u.uid}','${u.name}','${u.dp}')">
+                <div class="avatar">${u.dp ? `<img src="${u.dp}">` : u.name[0]}</div><b>${u.name}</b></div>`;
+        } else alert("Nahi mila!");
+    };
+
+    window.closeChat = () => {
+        document.getElementById('private-ui').style.display = 'none';
+        if(unsubStatus) unsubStatus();
+    };
+</script>
+</body>
+</html>
